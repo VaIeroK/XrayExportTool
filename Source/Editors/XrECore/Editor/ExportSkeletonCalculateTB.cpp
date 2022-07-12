@@ -15,6 +15,10 @@
 #include "../../../xrRender/Private/hw.h"
 #include "../../../xrEngine/pure.h"
 class CGameFont;
+#include "../XrRender/public/drawutils.h"
+#include "../XrRender/Private/xrD3dDefs.h"
+#include "../XrRender/Private/shader.h"
+#include "../XrRender/Private/R_Backend.h"
 
 #include "..\..\xrEngine\fmesh.h"
 #include "..\..\xrEngine\_d3d_extensions.h"
@@ -181,10 +185,10 @@ void CExportSkeleton::SSplit::CalculateTB()
 ///////////////////////////////////////////////////////////////////////////////////////////////////// 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
-/*#include "../WildMagic/nvmeshmender.h"
-#include "../../common/NvMender2003/nvMeshMender.h"
-#include "../../common/NvMender2003/mender_input_output.h"
-#include "../../common/NvMender2003/remove_isolated_verts.h"*/
+#include "../Editors/Public/nvmeshmender.h"
+#include "../Editors/Public/NVMeshMender.h"
+#include "../Editors/Public/mender_input_output.h"
+#include "../Editors/Public/remove_isolated_verts.h"
 
 void 	CExportSkeleton::SSplit::OptimizeTextureCoordinates()
 {
@@ -217,29 +221,29 @@ void 	CExportSkeleton::SSplit::OptimizeTextureCoordinates()
       }
     }
 }
-/*
+
 IC void	set_vertex( MeshMender::Vertex &out_vertex, const SSkelVert& in_vertex )
 {
-			cv_vector( out_vertex.pos,		in_vertex.offs );
-			cv_vector( out_vertex.normal,	in_vertex.norm );
-			out_vertex.s		= in_vertex.uv.x;
-			out_vertex.t		= in_vertex.uv.y;
-			//out_vertex.tangent;
-			//out_vertex.binormal;
+	cv_vector( out_vertex.pos,		in_vertex.offs );
+	cv_vector( out_vertex.normal,	in_vertex.norm );
+	out_vertex.s		= in_vertex.uv.x;
+	out_vertex.t		= in_vertex.uv.y;
+	//out_vertex.tangent;
+	//out_vertex.binormal;
 }
 
 IC void	set_vertex( SSkelVert& out_vertex,  const SSkelVert& in_old_vertex, const MeshMender::Vertex &in_vertex )
 {
-			out_vertex = in_old_vertex;
+	out_vertex = in_old_vertex;
 
-			cv_vector( out_vertex.offs, in_vertex.pos );//?
-			cv_vector( out_vertex.norm, in_vertex.normal );//?
+	cv_vector( out_vertex.offs, in_vertex.pos );//?
+	cv_vector( out_vertex.norm, in_vertex.normal );//?
 
-			out_vertex.uv.x	= in_vertex.s;
-			out_vertex.uv.y	= in_vertex.t;
-			Fvector tangent; Fvector binormal;
-			out_vertex.tang.set( cv_vector( tangent, in_vertex.tangent ) );
-			out_vertex.binorm.set( cv_vector( binormal, in_vertex.binormal ) );
+	out_vertex.uv.x	= in_vertex.s;
+	out_vertex.uv.y	= in_vertex.t;
+	Fvector tangent; Fvector binormal;
+	out_vertex.tang.set( cv_vector( tangent, in_vertex.tangent ) );
+	out_vertex.binorm.set( cv_vector( binormal, in_vertex.binormal ) );
 }
 
 
@@ -255,13 +259,9 @@ IC const u16 &face_vertex( const SSkelFace &F, u32 vertex_index )
 	return F.v[vertex_index];
 }
 
-
-
-*/
-
 void 	CExportSkeleton::SSplit::CalculateTB	()
 {
-	/*xr_vector<MeshMender::Vertex>	mender_in_out_verts;
+	xr_vector<MeshMender::Vertex>	mender_in_out_verts;
 	xr_vector< unsigned int >		mender_in_out_indices;
 	xr_vector< unsigned int >		mender_mapping_out_to_in_vert;
 
@@ -297,5 +297,5 @@ void 	CExportSkeleton::SSplit::CalculateTB	()
 	mender_in_out_indices			.clear( );
 	mender_mapping_out_to_in_vert	.clear( );
 
-	OptimizeTextureCoordinates();*/
+	OptimizeTextureCoordinates();
 }

@@ -2,11 +2,14 @@
 #pragma hdrstop
 
 #include "ExportObjectOGF.h"
+ 
+#include "../Editors/Public/nvmeshmender.h"
+#include "../Editors/Public/NVMeshMender.h"
+#include "../Editors/Public/mender_input_output.h"
+#include "../Editors/Public/remove_isolated_verts.h"
 
-//--------------------------------------------------------------------------------
 
-//--------------------------------------------------------------------------------
-/*IC void	set_vertex( MeshMender::Vertex &out_vertex, const SOGFVert& in_vertex )
+IC void	set_vertex( MeshMender::Vertex &out_vertex, const SOGFVert& in_vertex )
 {
 			cv_vector( out_vertex.pos,		in_vertex.P );
 			cv_vector( out_vertex.normal,	in_vertex.N );
@@ -42,7 +45,7 @@ IC const WORD &face_vertex( const SOGFFace &F, u32 vertex_index )
 	VERIFY( vertex_index < 3 );
 	return F.v[vertex_index];
 }
-*/
+
 //--------------------------------------------------------------------------------------------
 void CObjectOGFCollectorPacked::CalculateTB()
 {
@@ -150,7 +153,7 @@ void CObjectOGFCollectorPacked::CalculateTB()
         iV.B.set	(o_binormal[v_idx*3+0],	o_binormal[v_idx*3+1],	o_binormal[v_idx*3+2]);
         iV.UV.set	(o_tc[v_idx*3+0],		o_tc[v_idx*3+1]);
     }
-  
+  */
 
 
   	xr_vector<MeshMender::Vertex>	mender_in_out_verts;
@@ -189,7 +192,4 @@ void CObjectOGFCollectorPacked::CalculateTB()
 	mender_mapping_out_to_in_vert	.clear( );
 
     OptimizeTextureCoordinates();
-
-	*/
-
 }

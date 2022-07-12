@@ -311,46 +311,46 @@ void CEditableObject::EvictObject()
     DefferedUnloadRP			();
 }
 
-//bool CEditableObject::PrepareOGF(IWriter& F, u8 infl, bool gen_tb, CEditableMesh* mesh)
-//{
-//	return IsSkeleton()?PrepareSkeletonOGF(F,infl):PrepareRigidOGF(F,gen_tb,mesh);
-//}
-//
-//bool CEditableObject::PrepareRigidOGF(IWriter& F, bool gen_tb, CEditableMesh* mesh)
-//{
-//    CExportObjectOGF E(this);
-//    return E.Export(F,gen_tb,mesh);
-//}
-//
-//bool CEditableObject::PrepareSVGeometry(IWriter& F, u8 infl)
-//{
-//    CExportSkeleton E(this);
-//    return E.ExportGeometry(F, infl);
-//}
-//
-//bool CEditableObject::PrepareSVKeys(IWriter& F)
-//{
-//    CExportSkeleton E(this);
-//    return E.ExportMotionKeys(F);
-//}
-//
-//bool CEditableObject::PrepareSVDefs(IWriter& F)
-//{
-//    CExportSkeleton E(this);
-//    return E.ExportMotionDefs(F);
-//}
-//
-//bool CEditableObject::PrepareSkeletonOGF(IWriter& F, u8 infl)
-//{
-//    CExportSkeleton E(this);
-//    return E.Export(F,infl);
-//}
-//
-//bool CEditableObject::PrepareOMF(IWriter& F)
-//{
-//    CExportSkeleton E(this);
-//    return E.ExportMotions(F);
-//}
+bool CEditableObject::PrepareOGF(IWriter& F, u8 infl, bool gen_tb, CEditableMesh* mesh)
+{
+	return IsSkeleton()?PrepareSkeletonOGF(F,infl):PrepareRigidOGF(F,gen_tb,mesh);
+}
+
+bool CEditableObject::PrepareRigidOGF(IWriter& F, bool gen_tb, CEditableMesh* mesh)
+{
+    CExportObjectOGF E(this);
+    return E.Export(F,gen_tb,mesh);
+}
+
+bool CEditableObject::PrepareSVGeometry(IWriter& F, u8 infl)
+{
+    CExportSkeleton E(this);
+    return E.ExportGeometry(F, infl);
+}
+
+bool CEditableObject::PrepareSVKeys(IWriter& F)
+{
+    CExportSkeleton E(this);
+    return E.ExportMotionKeys(F);
+}
+
+bool CEditableObject::PrepareSVDefs(IWriter& F)
+{
+    CExportSkeleton E(this);
+    return E.ExportMotionDefs(F);
+}
+
+bool CEditableObject::PrepareSkeletonOGF(IWriter& F, u8 infl)
+{
+    CExportSkeleton E(this);
+    return E.Export(F,infl);
+}
+
+bool CEditableObject::PrepareOMF(IWriter& F)
+{
+    CExportSkeleton E(this);
+    return E.ExportMotions(F);
+}
 //---------------------------------------------------------------------------
 
 void  CEditableObject::OnChangeTransform(PropValue*)
@@ -375,12 +375,24 @@ bool CEditableObject::CheckShaderCompatible()
         Shader_xrLC* 	C = EDevice->ShaderXRLC.Get(*(*s_it)->m_ShaderXRLCName);
         if (!B||!C){
         	ELog.Msg	(mtError,"Object '%s': invalid or missing shader [E:'%s', C:'%s']",GetName(),(*s_it)->_ShaderName(),(*s_it)->_ShaderXRLCName());
+            ELog.Msg	(mtError,"        surface: '%s'",(*s_it)->_Name());
             bRes 		= false;
         }else{
             if (!BE(B->canBeLMAPped(),!C->flags.bLIGHT_Vertex)){
                 ELog.Msg	(mtError,"Object '%s': engine shader '%s' non compatible with compiler shader '%s'",GetName(),(*s_it)->_ShaderName(),(*s_it)->_ShaderXRLCName());
+                ELog.Msg	(mtError,"        surface: '%s'",(*s_it)->_Name());
                 bRes 		= false;
             }
+            if (IsStatic() && B->getDescription().CLS == B_TREE){
+            	ELog.Msg	(mtError,"Object '%s': engine shader '%s' not compatible with static objects",GetName(),(*s_it)->_ShaderName());
+                ELog.Msg	(mtError,"        surface: '%s'",(*s_it)->_Name());
+                bRes		= false;
+            }
+			//if (IsMUStatic() && B->getDescription().CLS != B_TREE && C->flags.bRendering){
+			//	ELog.Msg	(mtError,"Object '%s': engine shader '%s' non compatible with compiler shader '%s' on MU-objects",GetName(),(*s_it)->_ShaderName(),(*s_it)->_ShaderXRLCName());
+			//    ELog.Msg	(mtError,"        surface: '%s'",(*s_it)->_Name());
+			//    bRes		= false;
+			//}
         }
     }
     return bRes;

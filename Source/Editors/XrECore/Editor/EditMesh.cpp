@@ -401,7 +401,7 @@ void CEditableMesh::GetFacePT(u32 fid, const Fvector* pt[3])
     	pt[k] = &m_Vertices[F.pv[k].pindex];
 }
 
-int CEditableMesh::GetFaceCount(bool bMatch2Sided, bool bIgnoreOCC)
+int CEditableMesh::GetFaceCount(bool bMatch2Sided)
 {
 	static shared_str occ_name = "materials\\occ";
 	int f_cnt = 0;

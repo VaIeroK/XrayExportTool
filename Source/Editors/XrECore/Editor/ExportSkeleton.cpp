@@ -26,7 +26,6 @@
 
 
 ECORE_API BOOL g_force16BitTransformQuant = FALSE;
-ECORE_API float g_EpsSkelPositionDelta = EPS_L;
 
 u16 CSkeletonCollectorPacked::VPack(SSkelVert& V)
 {
@@ -275,7 +274,7 @@ void CExportSkeleton::SSplit::Save(IWriter& F)
         {
             SSkelVert& pV 	= *v_it;
             pV.sort_by_weight	();
-            float _weight_b0		= 0.0f;
+            float _weight_b0;
 
 			// write vertex
             F.w_u16		(pV.bones[0].id);
@@ -306,7 +305,7 @@ void CExportSkeleton::SSplit::Save(IWriter& F)
         {
             SSkelVert& pV 		= *v_it;
             pV.sort_by_weight	();
-            u32 i				= 0;
+            u32 i;
 
             u32 _bones 			= pV.bones.size();
             R_ASSERT			( m_SkeletonLinkType >= pV.bones.size() );
@@ -628,7 +627,7 @@ bool CExportSkeleton::PrepareGeometry(u8 influence)
                         VERIFY							(sv.bones.size()>0 && (u8)sv.bones.size()<=influence);
 
 						Fvector offs = sv.offs;
-						offs.mul(1.0f);
+						offs.mul(m_Source->a_vScale);
 
                         if (link_type==1)
                         {
@@ -700,7 +699,7 @@ bool CExportSkeleton::PrepareGeometry(u8 influence)
                     if (mtl_idx<0)
                     {
 						Fmatrix mScale;
-						mScale.scale(1.0f, 1.0f, 1.0f);
+						mScale.scale(m_Source->a_vScale, m_Source->a_vScale, m_Source->a_vScale);
 
 						Fbox box;
 						box.xform(m_Source->GetBox(), mScale);
@@ -826,7 +825,7 @@ bool CExportSkeleton::ExportGeometry(IWriter& F, u8 infl)
 		    bone_points		[sv_it->bones[0].id].push_back						(sv_it->offs);
 
 			Fmatrix xform = bones[sv_it->bones[0].id]->_RTransform();
-			xform.c.mul(1.0f);
+			xform.c.mul(m_Source->a_vScale);
 
 			Fmatrix i_xform;
 			i_xform.invert(xform);

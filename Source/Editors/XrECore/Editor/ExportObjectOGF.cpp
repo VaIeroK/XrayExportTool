@@ -29,9 +29,9 @@ CObjectOGFCollectorPacked::CObjectOGFCollectorPacked(const Fbox &bb, int apx_ver
 
     int		_size	= (clpOGFMX+1)*(clpOGFMY+1)*(clpOGFMZ+1);
     int		_average= (apx_vertices/_size)/2;
-    for (int ix=0; ix<clpOGFMX+1; ++ix)
-        for (int iy=0; iy<clpOGFMY+1; ++iy)
-            for (int iz=0; iz<clpOGFMZ+1; ++iz)
+    for (int ix=0; ix<clpOGFMX+1; ix++)
+        for (int iy=0; iy<clpOGFMY+1; iy++)
+            for (int iz=0; iz<clpOGFMZ+1; iz++)
                 m_VM[ix][iy][iz].reserve	(_average);
 }
 
@@ -63,7 +63,7 @@ u16 CObjectOGFCollectorPacked::VPack(SOGFVert& V)
     {
     	if (similar_pos>=0) V.P.set(m_Verts[similar_pos].P);
         P = m_Verts.size();
-    	if (P>=0xFFFF) return 0xffff;
+    	if (P>=0xFFFF) return 0xffffffff;
         m_Verts.push_back(V);
 
         m_VM[ix][iy][iz].push_back(P);
@@ -90,9 +90,15 @@ u16 CObjectOGFCollectorPacked::VPack(SOGFVert& V)
 void CObjectOGFCollectorPacked::ComputeBounding()
 {
 	m_Box.invalidate		();
-    for (OGFVertIt v_it=m_Verts.begin(); v_it!=m_Verts.end(); ++v_it)
+//	FvectorVec				split_verts;
+//    split_verts.resize		(m_Verts.size());
+//    FvectorIt r_it=split_verts.begin();
+    for (OGFVertIt v_it=m_Verts.begin(); v_it!=m_Verts.end(); v_it++/*,r_it++*/){
+//        r_it->set			(v_it->P);
         m_Box.modify		(v_it->P);
 }
+}
+//----------------------------------------------------
 
 CExportObjectOGF::SSplit::SSplit(CSurface* surf, const Fbox& bb)
 {
@@ -103,7 +109,7 @@ CExportObjectOGF::SSplit::SSplit(CSurface* surf, const Fbox& bb)
 
 CExportObjectOGF::SSplit::~SSplit()
 {
-	for (COGFCPIt it=m_Parts.begin(); it!=m_Parts.end(); ++it)
+	for (COGFCPIt it=m_Parts.begin(); it!=m_Parts.end(); it++)
     	xr_delete(*it);
 }
 
@@ -138,13 +144,11 @@ void CExportObjectOGF::SSplit::SavePart(IWriter& F, CObjectOGFCollectorPacked* p
     F.open_chunk		(OGF_VERTICES);
     F.w_u32				(dwFVF);
     F.w_u32				(part->m_Verts.size());
-    for (OGFVertIt v_it=part->m_Verts.begin(); v_it!=part->m_Verts.end(); ++v_it)
-	{
-        SOGFVert const& pV 	= *v_it;
+    for (OGFVertIt v_it=part->m_Verts.begin(); v_it!=part->m_Verts.end(); v_it++){
+        SOGFVert& pV 	= *v_it;
         F.w				(&(pV.P), sizeof(float)*3);		// position (offset)
         F.w				(&(pV.N), sizeof(float)*3);		// normal
-        F.w_float		(pV.UV.x); 
-		F.w_float		(pV.UV.y);	// tu,tv
+        F.w_float		(pV.UV.x); F.w_float(pV.UV.y);	// tu,tv
     }
     F.close_chunk		();
 
@@ -155,56 +159,105 @@ void CExportObjectOGF::SSplit::SavePart(IWriter& F, CObjectOGFCollectorPacked* p
     F.close_chunk		();
 
     // PMap
-    if (part->m_SWR.size()) 
-	{
+    if (part->m_SWR.size()) {
         F.open_chunk(OGF_SWIDATA);
         F.w_u32			(0);			// reserved space 16 bytes
         F.w_u32			(0);
         F.w_u32			(0);
         F.w_u32			(0);
         F.w_u32			(part->m_SWR.size()); // num collapses
-        for (u32 swr_idx=0; swr_idx<part->m_SWR.size(); ++swr_idx)
+        for (u32 swr_idx=0; swr_idx<part->m_SWR.size(); swr_idx++)
             F.w			(&part->m_SWR[swr_idx],sizeof(VIPM_SWR));
-
         F.close_chunk();
     }
+/*
+    AnsiString r=AnsiString("x:\\import\\test")+chunk_id+".smf";
+    IWriter* W 	= FS._w_open(r.c_str());
+// optimize
+/*
+    FvectorVec 			pts;
+    U32Vec 				remap_idx	(part->m_Verts.size(),0);
+    for (v_it=part->m_Verts.begin(); v_it!=part->m_Verts.end(); v_it++){
+        SOGFVert& pV 	= *v_it;
+        BOOL bFound		= FALSE;
+        for (FvectorIt vert_it=pts.begin(); vert_it!=pts.end(); vert_it++){
+            if (vert_it->similar(pV.P,EPS_L)){
+                remap_idx[v_it-part->m_Verts.begin()]=vert_it-pts.begin();
+                bFound	= TRUE;
+                break;
+            }
+        }
+
+    for (FvectorIt vert_it=pts.begin(); vert_it!=pts.end(); vert_it++){
+        AnsiString 		tmp;
+        tmp.sprintf		("v %f %f %f",vert_it->x,vert_it->y,-vert_it->z);
+        W->w_string		(tmp.c_str());
+    }
+    for (OGFFaceIt f_it=part->m_Faces.begin(); f_it!=part->m_Faces.end(); f_it++){
+        SOGFFace& pF 	= *f_it;
+        AnsiString 		tmp;
+        tmp.sprintf		("f %d %d %d",remap_idx[pF.v[0]]+1,remap_idx[pF.v[2]]+1,remap_idx[pF.v[1]]+1);
+        W->w_string		(tmp.c_str());
+    }
+*/
+/*
+    // vertices
+    for (v_it=part->m_Verts.begin(); v_it!=part->m_Verts.end(); v_it++){
+        SOGFVert& pV 	= *v_it;
+        AnsiString 		tmp;
+        tmp.sprintf		("v %f %f %f",pV.P.x,pV.P.y,-pV.P.z);
+        W->w_string		(tmp.c_str());
+    }
+    // face
+    for (OGFFaceIt f_it=part->m_Faces.begin(); f_it!=part->m_Faces.end(); f_it++){
+        SOGFFace& pF 	= *f_it;
+        AnsiString 		tmp;
+        tmp.sprintf		("f %d %d %d",pF.v[0]+1,pF.v[2]+1,pF.v[1]+1);
+        W->w_string		(tmp.c_str());
+    }
+    // normals
+    W->w_string			("bind n vertex");
+    for (v_it=part->m_Verts.begin(); v_it!=part->m_Verts.end(); v_it++){
+        SOGFVert& pV 	= *v_it;
+        AnsiString 		tmp;
+        tmp.sprintf		("n %f %f %f",pV.N.x,pV.N.y,-pV.N.z);
+        W->w_string		(tmp.c_str());
+    }
+    FS.w_close	(W);
+//*/            
 }
 
 void CExportObjectOGF::SSplit::Save(IWriter& F, int& chunk_id)
 {
-    for (COGFCPIt it=m_Parts.begin(); it!=m_Parts.end(); ++it)
-	{
+    for (COGFCPIt it=m_Parts.begin(); it!=m_Parts.end(); it++){
         CObjectOGFCollectorPacked* part = *it;
         F.open_chunk					(chunk_id);
         SavePart						(F, part);
         F.close_chunk					();
-        ++chunk_id;
+        chunk_id++;
     }
 }
+//----------------------------------------------------
 
 void CObjectOGFCollectorPacked::MakeProgressive()
 {
 	VIPM_Init	();
-
-    for (OGFVertIt vert_it=m_Verts.begin(); vert_it!=m_Verts.end(); ++vert_it)
+    for (OGFVertIt vert_it=m_Verts.begin(); vert_it!=m_Verts.end(); vert_it++)
     	VIPM_AppendVertex(vert_it->P,vert_it->UV);
-
-    for (OGFFaceIt f_it=m_Faces.begin(); f_it!=m_Faces.end(); ++f_it)
+    for (OGFFaceIt f_it=m_Faces.begin(); f_it!=m_Faces.end(); f_it++)
     	VIPM_AppendFace(f_it->v[0],f_it->v[1],f_it->v[2]);
 
     VIPM_Result* R = VIPM_Convert(u32(-1),1.f,1);
 
-    if (R)
-	{
+    if (R){
         // Permute vertices
-        OGFVertVec const temp_list	= m_Verts;
-        for(u32 i=0; i<temp_list.size(); ++i)
+        OGFVertVec temp_list = m_Verts;
+        for(u32 i=0; i<temp_list.size(); i++)
             m_Verts[R->permute_verts[i]]=temp_list[i];
     
         // Fill indices
         m_Faces.resize	(R->indices.size()/3);
-        for (u32 f_idx=0; f_idx<m_Faces.size(); ++f_idx)
-		{
+        for (u32 f_idx=0; f_idx<m_Faces.size(); f_idx++){
             SOGFFace& F		= m_Faces[f_idx];
             F.v[0]			= R->indices[f_idx*3+0];
             F.v[1]			= R->indices[f_idx*3+1];
@@ -213,7 +266,7 @@ void CObjectOGFCollectorPacked::MakeProgressive()
 
         // Fill SWR
         m_SWR.resize		(R->swr_records.size());
-        for (u32 swr_idx=0; swr_idx!=m_SWR.size(); ++swr_idx)
+        for (u32 swr_idx=0; swr_idx!=m_SWR.size(); swr_idx++)
             m_SWR[swr_idx]	= R->swr_records[swr_idx];
 
 	}else{
@@ -234,9 +287,8 @@ void CObjectOGFCollectorPacked:: OptimizeTextureCoordinates()
     Tmax.set	(flt_min, flt_min);
 	const u32    v_cnt = m_Verts.size();
     {
-      for (u32 v_idx=0; v_idx!=v_cnt; v_idx++)
-	  {
-          SOGFVert const& iV	= m_Verts[v_idx];
+      for (u32 v_idx=0; v_idx!=v_cnt; v_idx++){
+          SOGFVert	&iV = m_Verts[v_idx];
           Tmin.min				(iV.UV);
           Tmax.max				(iV.UV);
       }
@@ -246,10 +298,11 @@ void CObjectOGFCollectorPacked:: OptimizeTextureCoordinates()
 
     Fvector2	Tsize;
     Tsize.sub	(Tmax,Tmin);
+//	if ((Tsize.x>32)||(Tsize.y>32))
+//    	Msg		("#!Surface [T:'%s', S:'%s'] has UV tiled more than 32 times.",m_Texture.c_str(),m_Shader.c_str());
 	{
       // 2. Recalc UV mapping
-      for (u32 v_idx=0; v_idx!=v_cnt; ++v_idx)
-	  {
+      for (u32 v_idx=0; v_idx!=v_cnt; v_idx++){
           SOGFVert	&iV		= m_Verts[v_idx];
           iV.UV.sub			(Tdelta);
       }
@@ -258,7 +311,7 @@ void CObjectOGFCollectorPacked:: OptimizeTextureCoordinates()
 
 void CExportObjectOGF::SSplit::MakeProgressive()
 {
-	for (COGFCPIt it=m_Parts.begin(); it!=m_Parts.end(); ++it)
+	for (COGFCPIt it=m_Parts.begin(); it!=m_Parts.end(); it++)
     	(*it)->MakeProgressive();
 }
 
@@ -269,7 +322,7 @@ CExportObjectOGF::CExportObjectOGF(CEditableObject* object)
 
 CExportObjectOGF::~CExportObjectOGF()
 {
-	for (SplitIt it=m_Splits.begin(); it!=m_Splits.end(); ++it)
+	for (SplitIt it=m_Splits.begin(); it!=m_Splits.end(); it++)
     	xr_delete(*it);
 }
 
@@ -288,12 +341,10 @@ bool CExportObjectOGF::PrepareMESH(CEditableMesh* MESH)
 	bool bResult = true;
     MESH->GenerateVNormals(0);
     // fill faces
-    for (SurfFacesPairIt sp_it=MESH->m_SurfFaces.begin(); sp_it!=MESH->m_SurfFaces.end(); ++sp_it)
-	{
+    for (SurfFacesPairIt sp_it=MESH->m_SurfFaces.begin(); sp_it!=MESH->m_SurfFaces.end(); sp_it++){
         IntVec& face_lst= sp_it->second;
         CSurface* surf 	= sp_it->first;
-        u32 dwTexCnt 	= ((surf->_FVF()&D3DFVF_TEXCOUNT_MASK)>>D3DFVF_TEXCOUNT_SHIFT);	
-		R_ASSERT		(dwTexCnt==1);
+        u32 dwTexCnt 	= ((surf->_FVF()&D3DFVF_TEXCOUNT_MASK)>>D3DFVF_TEXCOUNT_SHIFT);	R_ASSERT(dwTexCnt==1);
         SSplit* split	= FindSplit(surf);
         if (0==split)
 		{
@@ -312,30 +363,26 @@ bool CExportObjectOGF::PrepareMESH(CEditableMesh* MESH)
         int 	elapsed_faces 	= surf->m_Flags.is(CSurface::sf2Sided) ?face_lst.size()*2 : face_lst.size();
         const 	bool b2sided	= !!surf->m_Flags.is(CSurface::sf2Sided);
             
-        if (0==split->m_CurrentPart) 
-			split->AppendPart(	(elapsed_faces>0xffff) ? 0xffff : elapsed_faces,
-								(elapsed_faces>0xffff) ? 0xffff : elapsed_faces);
+        if (0==split->m_CurrentPart) split->AppendPart(elapsed_faces>0xffff?0xffff:elapsed_faces,elapsed_faces>0xffff?0xffff:elapsed_faces);
             
         do{
-            for (IntIt f_it=face_lst.begin(); f_it!=face_lst.end(); ++f_it)
-			{
+            for (IntIt f_it=face_lst.begin(); f_it!=face_lst.end(); f_it++){
                 bool bNewPart	= false;
                 st_Face& face 	= MESH->m_Faces[*f_it];
                 {
                     SOGFVert v[3];
-                    for (int k=0; k<3; ++k)
-					{
+                    for (int k=0; k<3; k++){
                         st_FaceVert& 	fv = face.pv[k];
                         int offs 		= 0;
                         const Fvector2* uv = 0;
-                        for (u32 t=0; t<dwTexCnt; ++t)
+                        for (u32 t=0; t<dwTexCnt; t++)
                         {
                             st_VMapPt& vm_pt 	= MESH->m_VMRefs[fv.vmref].pts[t+offs];
                             st_VMap& vmap		= *MESH->m_VMaps[vm_pt.vmap_index];
                             if (vmap.type!=vmtUV)
                             {
-                            	++offs;
-                                --t;
+                            	offs++;
+                                t--;
                                 continue;
                             }
                             uv					= &vmap.getUV(vm_pt.index);
@@ -343,22 +390,17 @@ bool CExportObjectOGF::PrepareMESH(CEditableMesh* MESH)
                         R_ASSERT2		(uv,"uv empty");
                         u32 norm_id 	= (*f_it)*3+k;
                         R_ASSERT2		(norm_id<MESH->GetFCount()*3,"Normal index out of range.");
-                        v[k].set		(MESH->m_Vertices[fv.pindex],MESH->m_VertexNormals[norm_id],*uv);
+						Fvector2 _uv = *uv;
+						v[k].set		(MESH->m_Vertices[fv.pindex],MESH->m_VertexNormals[norm_id],_uv);
                     }   
-                    --elapsed_faces;
-                    if (!split->m_CurrentPart->add_face(v[0], v[1], v[2])) 		
-						bNewPart	= true;
-
-                    if (b2sided)
-					{
+                    elapsed_faces--;
+                    if (!split->m_CurrentPart->add_face(v[0], v[1], v[2])) 		bNewPart	= true;
+                    if (b2sided){
                         v[0].N.invert(); v[1].N.invert(); v[2].N.invert();
-                        if (!split->m_CurrentPart->add_face(v[2], v[1], v[0]))	
-							bNewPart	= true;
+                        if (!split->m_CurrentPart->add_face(v[2], v[1], v[0]))	bNewPart	= true;
                     }
                 }
-                if (bNewPart && (elapsed_faces>0)) 
-					split->AppendPart(	(elapsed_faces>0xffff) ? 0xffff : elapsed_faces,
-										(elapsed_faces>0xffff) ? 0xffff : elapsed_faces);
+                if (bNewPart && (elapsed_faces>0)) split->AppendPart(elapsed_faces>0xffff?0xffff:elapsed_faces,elapsed_faces>0xffff?0xffff:elapsed_faces);
             }
         }while(elapsed_faces>0);
     }
@@ -372,33 +414,24 @@ bool CExportObjectOGF::Prepare(bool gen_tb, CEditableMesh* mesh)
     if( (m_Source->MeshCount() == 0) ) return false;
 
     bool bResult 		= true;
-    if (mesh) 
-		bResult 		= PrepareMESH(mesh);
-    else
-	{
-        for(EditMeshIt mesh_it=m_Source->FirstMesh();mesh_it!=m_Source->LastMesh();++mesh_it)
-        	if (!PrepareMESH(*mesh_it)) 
-			{ 
-				bResult	= false; 
-				break; 
-			}
+    if (mesh) bResult 	= PrepareMESH(mesh);
+    else{
+        for(EditMeshIt mesh_it=m_Source->FirstMesh();mesh_it!=m_Source->LastMesh();mesh_it++)
+        	if (!PrepareMESH(*mesh_it)) { bResult=FALSE; break; }
     }
 
-    if (!bResult)		
-		return false;
+    if (!bResult)		return FALSE;
 
     // calculate TB
-    if (gen_tb)
-	{
-        for (SplitIt split_it=m_Splits.begin(); split_it!=m_Splits.end(); ++split_it)
+    if (gen_tb){
+        for (SplitIt split_it=m_Splits.begin(); split_it!=m_Splits.end(); split_it++)
             (*split_it)->CalculateTB();
 //        Log				("Time B: ",T.GetElapsed_sec());
     }
 
     // fill per bone vertices
-	if (m_Source->m_objectFlags.is(CEditableObject::eoProgressive))
-	{
-        for (SplitIt split_it=m_Splits.begin(); split_it!=m_Splits.end(); ++split_it)
+	if (m_Source->m_objectFlags.is(CEditableObject::eoProgressive)){
+        for (SplitIt split_it=m_Splits.begin(); split_it!=m_Splits.end(); split_it++)
             (*split_it)->MakeProgressive();
     }
 
@@ -410,16 +443,13 @@ bool CExportObjectOGF::Prepare(bool gen_tb, CEditableMesh* mesh)
 
 bool CExportObjectOGF::Export(IWriter& F, bool gen_tb, CEditableMesh* mesh)
 {
-    if( !Prepare(gen_tb,mesh) ) 
-		return			false;
+    if( !Prepare(gen_tb,mesh) ) return false;
 
 	// Saving geometry...
-    if ((m_Splits.size()==1)&&(m_Splits[0]->m_Parts.size()==1))
-	{
+    if ((m_Splits.size()==1)&&(m_Splits[0]->m_Parts.size()==1)){
     	// export as single mesh
         m_Splits[0]->SavePart(F,m_Splits[0]->m_Parts[0]);
-    }else
-	{
+    }else{
     	// export as hierrarhy mesh
         // Header
         ogf_header 		H;
@@ -441,55 +471,12 @@ bool CExportObjectOGF::Export(IWriter& F, bool gen_tb, CEditableMesh* mesh)
         // OGF_CHILDREN
         F.open_chunk	(OGF_CHILDREN);
         int chunk		= 0;
-        for (SplitIt split_it=m_Splits.begin(); split_it!=m_Splits.end(); ++split_it)
+        for (SplitIt split_it=m_Splits.begin(); split_it!=m_Splits.end(); split_it++)
             (*split_it)->Save(F,chunk);
 
         F.close_chunk	();
     }
-	SplitIt split_it;
-	F.open_chunk	(OGF_COLLISION_VERTICES);
-    for (split_it=m_Splits.begin(); split_it!=m_Splits.end(); ++split_it)
-	{
-		SSplit*	split			= *split_it;
-		COGFCPIt it				= split->m_Parts.begin();
-        for (; it!=split->m_Parts.end(); ++it)
-        {
-            CObjectOGFCollectorPacked* part = *it;
-            // vertices
-            OGFVertVec& VERTS	= part->getV_Verts();
-            OGFVertIt v_it		= VERTS.begin();
-            for(; v_it!=VERTS.end(); ++v_it)
-            {
-				SOGFVert& V		= *v_it;
-            	F.w				(&V.P, sizeof(V.P));
-			}
-		}//parts
-	}//splits
-    F.close_chunk	();
 
-	F.open_chunk	(OGF_COLLISION_INDICES);
-	u32	v_offs				= 0;
-    for (split_it=m_Splits.begin(); split_it!=m_Splits.end(); ++split_it)
-	{
-		SSplit*	split			= *split_it;
-		COGFCPIt it				= split->m_Parts.begin();
-
-		for(; it!=split->m_Parts.end(); ++it)
-		{
-            CObjectOGFCollectorPacked* part = *it;
-			OGFFaceVec& FACES	= part->getV_Faces();
-			OGFFaceIt f_it		= FACES.begin();
-			for(; f_it!=FACES.end(); ++f_it)
-			{
-				SOGFFace& Face	= *f_it;
-        		F.w_u32			(v_offs + Face.v[0]);
-        		F.w_u32			(v_offs + Face.v[1]);
-        		F.w_u32			(v_offs + Face.v[2]);
-			}
-			v_offs  			+= part->getV_Verts().size();
-		}//parts
-	}//splits
-    F.close_chunk	();
 
     return true;
 }
@@ -499,8 +486,7 @@ bool CExportObjectOGF::ExportAsSimple(IWriter& F)
     if( Prepare(true,NULL) )
     {
         // Saving geometry...
-        if ((m_Splits.size()==1)&&(m_Splits[0]->m_Parts.size()==1))
-		{
+        if ((m_Splits.size()==1)&&(m_Splits[0]->m_Parts.size()==1)){
             // export as single mesh
             m_Splits[0]->SavePart(F, m_Splits[0]->m_Parts[0]);
             return	true;
@@ -511,8 +497,7 @@ bool CExportObjectOGF::ExportAsSimple(IWriter& F)
 
 bool CExportObjectOGF::ExportAsWavefrontOBJ(IWriter& F, LPCSTR fn)
 {
-	if (!Prepare(false,NULL)) 
-		return false;
+	if (!Prepare(false,NULL)) return false;
 
     string_path 			tmp, tex_path, tex_name;
     string_path 			name, ext;
@@ -615,54 +600,4 @@ bool CExportObjectOGF::ExportAsWavefrontOBJ(IWriter& F, LPCSTR fn)
 	return true;
 }
 
-bool CEditableObject::PrepareOGF(IWriter& F, u8 infl, bool gen_tb, CEditableMesh* mesh)
-{
-	return IsSkeleton()?PrepareSkeletonOGF(F,infl):PrepareRigidOGF(F,gen_tb,mesh);
-}
 
-#include "ExportSkeleton.h"
-
-bool CEditableObject::PrepareSkeletonOGF(IWriter& F, u8 infl)
-{
-    CExportSkeleton E(this);
-
-    bool res = E.Export(F,infl);
-
-    return res;
-}
-
-bool CEditableObject::PrepareRigidOGF(IWriter& F, bool gen_tb, CEditableMesh* mesh)
-{
-    CExportObjectOGF E(this);
-
-    bool res = E.Export(F,gen_tb,mesh);
-    return res;
-}
-
-bool CEditableObject::PrepareSVGeometry(IWriter& F, u8 infl)
-{
-    CExportSkeleton E(this);
-
-    bool res = E.ExportGeometry(F, infl);
-
-    return res;
-}
-
-
-bool CEditableObject::PrepareSVKeys(IWriter& F)
-{
-    CExportSkeleton E(this);
-    return E.ExportMotionKeys(F);
-}
-
-bool CEditableObject::PrepareSVDefs(IWriter& F)
-{
-    CExportSkeleton E(this);
-    return E.ExportMotionDefs(F);
-}
-
-bool CEditableObject::PrepareOMF(IWriter& F)
-{
-    CExportSkeleton E(this);
-    return E.ExportMotions(F);
-}

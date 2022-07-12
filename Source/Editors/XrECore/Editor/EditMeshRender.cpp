@@ -47,7 +47,6 @@ void CEditableMesh::GenerateRenderBuffers()
         int start_face=0;
         int num_face;
         VERIFY3	(v_cnt,"Empty surface arrive.",_S->_Name());
-#if 0
         do{
 	        rb_vec.push_back	(st_RenderBuffer(0,(v_cnt<V_LIM)?v_cnt:V_LIM));
             st_RenderBuffer& rb	= rb_vec.back();
@@ -70,27 +69,6 @@ void CEditableMesh::GenerateRenderBuffers()
             v_cnt				-= V_LIM;
             start_face			+= (_S->m_Flags.is(CSurface::sf2Sided))?rb.dwNumVertex/6:rb.dwNumVertex/3;
         }while(v_cnt>0);
-#else
-        {
-            rb_vec.push_back(st_RenderBuffer(0, v_cnt));
-            st_RenderBuffer& rb = rb_vec.back();
-            if (_S->m_Flags.is(CSurface::sf2Sided))
-                rb.dwNumVertex *= 2;
-            num_face = v_cnt / 3;
-
-            int buf_size = D3DXGetFVFVertexSize(_S->_FVF()) * rb.dwNumVertex;
-            R_ASSERT2(buf_size, "Empty buffer size or bad FVF.");
-            u8* bytes = 0;
-            IDirect3DVertexBuffer9* pVB = 0;
-            R_CHK(HW.pDevice->CreateVertexBuffer(buf_size, D3DUSAGE_WRITEONLY, 0, D3DPOOL_MANAGED, &pVB, 0));
-            rb.pGeom.create(_S->_FVF(), pVB, 0);
-            R_CHK(pVB->Lock(0, 0, (LPVOID*)&bytes, 0));
-            FillRenderBuffer(face_lst, start_face, num_face, _S, bytes);
-            pVB->Unlock();
-
-            start_face += (_S->m_Flags.is(CSurface::sf2Sided)) ? rb.dwNumVertex / 6 : rb.dwNumVertex / 3;
-        }
-#endif
         if (num_verts>0) m_RenderBuffers->insert(mk_pair(_S,rb_vec));
     }
     UnloadVNormals();
@@ -320,7 +298,11 @@ void CEditableMesh::RenderSkeleton(const Fmatrix&, CSurface* S)
     	GenerateSVertices(RENDER_SKELETON_LINKS);
 
 	R_ASSERT2(m_SVertices,"SVertices empty!");
-	SurfFacesPairIt sp_it 	= m_SurfFaces.find(S); R_ASSERT(sp_it!=m_SurfFaces.end());
+	SurfFacesPairIt sp_it 	= m_SurfFaces.find(S); //R_ASSERT(sp_it!=m_SurfFaces.end());
+
+	if(sp_it == m_SurfFaces.end())
+    	return;
+
     IntVec& face_lst 		= sp_it->second;
 	_VertexStream*	Stream	= &RCache.Vertex;
 	u32				vBase;

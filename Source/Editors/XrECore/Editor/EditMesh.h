@@ -17,7 +17,7 @@ class	CCustomObject;
 #	include "pick_defs.h"
 #endif
 
-#include <bone.h>
+#include "bone.h"
 
 #pragma pack( push,1 )
 const u8	vmtUV		= 0;
@@ -228,9 +228,6 @@ public:
     void			UnloadVNormals   	(bool force=false);
     void			UnloadSVertices  	(bool force=false);
     void			UnloadAdjacency  	(bool force=false);
-IC  Fvector*	    Vertices			()					{ return m_Vertices; }	//
-IC	st_Face*	    Faces				()					{ return m_Faces; }   // + some array size!!!
-IC  SurfFaces	    &Surfaces			()					{ return m_SurfFaces; }
 private:
     // internal variables
 	enum{
@@ -282,6 +279,7 @@ public:
 	void 			OptimizeMesh			(BOOL NoOpt);
 public:
 	                CEditableMesh			(CEditableObject* parent){m_Parent=parent;Construct();}
+	                CEditableMesh			(CEditableMesh* source,CEditableObject* parent){m_Parent=parent;Construct();}
 	virtual         ~CEditableMesh			();
 	void			Construct				();
     void			Clear					();
@@ -332,7 +330,7 @@ public:
 	void 			RenderEdge				(const Fmatrix& parent, CSurface* s, u32 color);
 
     // statistics methods
-    int 			GetFaceCount			(bool bMatch2Sided=true, bool bIgnoreOCC=true);
+    int 			GetFaceCount			(bool bMatch2Sided=true);
 	int 			GetVertexCount			(){return m_VertCount;}
     int 			GetSurfFaceCount		(CSurface* surf, bool bMatch2Sided=true);
     float			CalculateSurfaceArea	(CSurface* surf, bool bMatch2Sided);
