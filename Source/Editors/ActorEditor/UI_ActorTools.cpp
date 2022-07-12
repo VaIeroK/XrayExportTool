@@ -438,11 +438,10 @@ bool CActorTools::Load(LPCSTR obj_name)
 
     VERIFY(m_bReady);
     CEditableObject* O = xr_new<CEditableObject>(obj_name);
-    if (FS.exist(full_name.c_str()) && O->Load(full_name.c_str())) 
-    {
+	if (FS.exist(full_name.c_str())&&O->Load(full_name.c_str())){
         xr_delete(m_pEditObject);
         m_pEditObject = O;
-        ///  m_pEditObject->Optimize ();
+        m_pEditObject->Optimize ();
           // delete visual
         m_RenderObject.Clear();
         

@@ -2,7 +2,7 @@
 #define ExportSkeletonH
 
 #include "PropSlimTools.h"
-//#include "../../../xrRender/Private/SkeletonCustom.h"
+#include "../../../xrRender/Private/SkeletonCustom.h"
 #include "EditMesh.h"
 //---------------------------------------------------------------------------
 const int clpSMX = 28, clpSMY=16, clpSMZ=28;
@@ -12,7 +12,6 @@ class CEditableObject;
 class CSurface;
 class CInifile;
 extern ECORE_API BOOL g_force16BitTransformQuant;
-extern ECORE_API float g_EpsSkelPositionDelta;
 
 struct ECORE_API SSkelVert: public st_SVert{
     Fvector		tang;
@@ -40,7 +39,7 @@ struct ECORE_API SSkelVert: public st_SVert{
     }
 	BOOL	similar_pos(SSkelVert& V)
     {
-        return offs.similar(V.offs,g_EpsSkelPositionDelta);
+        return offs.similar(V.offs,EPS);
     }
 	BOOL	similar(SSkelVert& V)
     {
@@ -53,10 +52,10 @@ struct ECORE_API SSkelVert: public st_SVert{
         if (!uv.similar	(V.uv,EPS_S))
         	return FALSE;
 
-		if (!offs.similar(V.offs,g_EpsSkelPositionDelta))
+		if (!offs.similar(V.offs,EPS))
         	return FALSE;
 
-		if (!norm.similar(V.norm,g_EpsSkelPositionDelta))
+		if (!norm.similar(V.norm,EPS))
         	return FALSE;
 
 		return TRUE;

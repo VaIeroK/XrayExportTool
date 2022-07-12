@@ -49,8 +49,7 @@ void CEditableMesh::Clear()
     UnloadFNormals		();
     UnloadVNormals		();
     UnloadSVertices		();
-	if (m_SmoothGroups)xr_free(m_SmoothGroups);
-	m_SmoothGroups = 0;
+
 	VERIFY				(m_FNormalsRefs==0 && m_VNormalsRefs==0 && m_AdjsRefs==0 && m_SVertRefs==0);
 
     xr_free				(m_Vertices);
@@ -210,7 +209,7 @@ void CEditableMesh::GenerateVNormals(const Fmatrix* parent_xform)
                     }else
 					{
 //.                    	Msg		("!Invalid smooth group found (MAX type). Object: '%s'. Vertex: [%3.2f, %3.2f, %3.2f]",m_Parent->GetName(),VPUSH(m_Vertices[m_Faces[f_i].pv[k].pindex]));
-#ifdef 0
+#ifdef 1
 						Fvector p0;
                         p0 = m_Vertices[m_Faces[f_i].pv[k].pindex];
                         Tools->m_DebugDraw.AppendPoint(p0, 0xffff0000, true, true, "invalid vNORMAL");
@@ -255,7 +254,7 @@ void CEditableMesh::GenerateVNormals(const Fmatrix* parent_xform)
 					{
 //.                    	Msg		("!Invalid smooth group found (Maya type). Object: '%s'. Vertex: [%3.2f, %3.2f, %3.2f]",m_Parent->GetName(),VPUSH(m_Vertices[m_Faces[f_i].pv[k].pindex]));
 
-#ifdef 0
+#ifdef 1
 						if(parent_xform)
                         {
 						Fvector p0;
@@ -406,17 +405,10 @@ int CEditableMesh::GetFaceCount(bool bMatch2Sided, bool bIgnoreOCC)
 {
 	static shared_str occ_name = "materials\\occ";
 	int f_cnt = 0;
-    for (SurfFacesPairIt sp_it=m_SurfFaces.begin(); sp_it!=m_SurfFaces.end(); sp_it++)
-    {
-    	CSurface* S = sp_it->first;
-        if(S->m_GameMtlName== occ_name && bIgnoreOCC)
-        	continue;
-            
+    for (SurfFacesPairIt sp_it=m_SurfFaces.begin(); sp_it!=m_SurfFaces.end(); sp_it++){
     	if (bMatch2Sided){
-	    	if (S->m_Flags.is(CSurface::sf2Sided))	
-            	f_cnt+=sp_it->second.size()*2;
-    	    else												
-            	f_cnt+=sp_it->second.size();
+	    	if (sp_it->first->m_Flags.is(CSurface::sf2Sided))	f_cnt+=sp_it->second.size()*2;
+    	    else												f_cnt+=sp_it->second.size();
         }else{
         	f_cnt+=sp_it->second.size();
         }
