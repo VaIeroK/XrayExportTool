@@ -109,6 +109,7 @@
     <ClCompile Include="..\..\XrRender\R1_PC\Blender_Shadow_World.cpp" />
     <ClCompile Include="..\..\XrRender\R1_PC\Blender_Vertex.cpp" />
     <ClCompile Include="..\..\XrRender\R1_PC\Blender_Vertex_aref.cpp" />
+    <ClCompile Include="..\Public\NVMeshMenderTwo.cpp" />
     <ClCompile Include="Editor\ColorPicker.cpp" />
     <ClCompile Include="Editor\c_dinput.cpp" />
     <ClCompile Include="Editor\D3DUtils.cpp" />

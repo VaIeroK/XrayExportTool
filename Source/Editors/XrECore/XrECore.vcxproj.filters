@@ -544,6 +544,9 @@
       <Filter>Render</Filter>
     </ClCompile>
     <ClCompile Include="LuaMemoryController.cpp" />
+    <ClCompile Include="..\Public\NVMeshMenderTwo.cpp">
+      <Filter>Editor</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="WildMagic\WmlMath.h">

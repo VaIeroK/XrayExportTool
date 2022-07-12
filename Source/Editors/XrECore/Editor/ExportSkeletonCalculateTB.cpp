@@ -185,7 +185,7 @@ void CExportSkeleton::SSplit::CalculateTB()
 ///////////////////////////////////////////////////////////////////////////////////////////////////// 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
-#include "../Editors/Public/nvmeshmender.h"
+#include "../XrECore/Engine/NVMeshMender.h"
 #include "../Editors/Public/NVMeshMender.h"
 #include "../Editors/Public/mender_input_output.h"
 #include "../Editors/Public/remove_isolated_verts.h"
