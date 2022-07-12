@@ -91,11 +91,9 @@ static const float ssaLim = 64.f*64.f/(640*480);
 void CEditableObject::Render(const Fmatrix& parent, int priority, bool strictB2F, SurfaceVec* surfaces){
     if (!(m_LoadState.is(LS_RBUFFERS)))
     	DefferedLoadRP();
-	Fvector v; 
-    float r;
-    Fbox bb; 
-    bb.xform			(m_BBox,parent); 
-    bb.getsphere		(v,r);
+
+	Fvector v; float r;
+    Fbox bb; bb.xform(m_Box,parent); bb.getsphere(v,r);
 
     if (EPrefs->object_flags.is(epoDrawLOD)&&(m_objectFlags.is(eoUsingLOD)&&(CalcSSA(v,r)<ssaLim)))
     {
@@ -121,31 +119,18 @@ void CEditableObject::Render(const Fmatrix& parent, int priority, bool strictB2F
         }else{
             if(psDeviceFlags.is(rsEdgedFaces)&&(1==priority)&&(false==strictB2F))
                 RenderEdge(parent);
-            size_t s_id = 0;
+
             for(SurfaceIt s_it=m_Surfaces.begin(); s_it!=m_Surfaces.end(); s_it++)
             {
-            	int pr = (*s_it)->_Priority();
-                bool strict = (*s_it)->_StrictB2F();
-                
-                if ((priority==pr)&&(strictB2F==strict))
-                {
-                    if (surfaces)
+                if ((priority==(*s_it)->_Priority())&&(strictB2F==(*s_it)->_StrictB2F()))
                     {
-                        EDevice->SetShader((*surfaces)[s_id]->_Shader());
-                       
-                    }
-                    else
-                    {
-
-                        EDevice->SetShader((*s_it)->_Shader());
-                    }
+                    EDevice->SetShader((*s_it)->_Shader());
                     for (EditMeshIt _M=m_Meshes.begin(); _M!=m_Meshes.end(); _M++)
                         if (IsSkeleton())
                         	(*_M)->RenderSkeleton	(parent,*s_it);
                         else
                         	(*_M)->Render			(parent,*s_it);
                 }
-                s_id++;
             }
         }
     }
@@ -199,13 +184,12 @@ void CEditableObject::GetLODFrame(int frame, Fvector p[4], Fvector2 t[4], const 
 {
 	R_ASSERT(m_objectFlags.is(eoUsingLOD));
     Fvector P,S;
-    m_BBox.get_CD	(P,S);
+    m_Box.get_CD(P,S);
     float r 		= _max(S.x,S.z);//sqrtf(S.x*S.x+S.z*S.z);
     Fmatrix T,matrix,rot;
     T.scale			(r,S.y,r);
     T.translate_over(P);
-    if (parent) 
-    	T.mulA_43(*parent);
+    if (parent) T.mulA_43(*parent);
 
     float angle 	= frame*(PI_MUL_2/float(LOD_SAMPLE_COUNT));
     rot.rotateY(-angle);
@@ -268,6 +252,8 @@ xr_string CEditableObject::GetLODTextureName()
 
 void CEditableObject::OnDeviceCreate()
 {
+	if(!EPrefs->object_flags.is(epoDeffLoadRB))
+    	DefferedLoadRP();
 }
 
 void CEditableObject::OnDeviceDestroy()
@@ -292,6 +278,11 @@ void CEditableObject::DefferedLoadRP()
     if (m_objectFlags.is(eoUsingLOD))
     	m_LODShader.create(GetLODShaderName(),l_name.c_str());
     m_LoadState.set(LS_RBUFFERS,TRUE);
+
+    // create surfaces shaders
+    SurfaceVec::iterator it, end;
+    for(it = m_Surfaces.begin(), end = m_Surfaces.end(); it != end; it++)
+    	(*it)->OnDeviceCreate();
 }
 void CEditableObject::DefferedUnloadRP()
 {
@@ -515,20 +506,6 @@ void CEditableObject::RenameBone(CBone* bone, LPCSTR new_name)
         if(B->ParentName()==bone->Name())
         	B->SetParentName(new_name);
     }
-
-    for (SMotionIt s_it=m_SMotions.begin(); s_it!=m_SMotions.end(); ++s_it) 
-    {
-    	CSMotion* M = *s_it;
-        for(BoneMotionIt bm_it=M->BoneMotions().begin(); bm_it!=M->BoneMotions().end(); ++bm_it)
-        {
-            if(bm_it->name == bone->Name())
-                bm_it->name = new_name;
-        }
-        
-    }
-
-	//bone->SetName(new_name);
-    
-    Modified();
+	bone->SetName(new_name);
 }
 

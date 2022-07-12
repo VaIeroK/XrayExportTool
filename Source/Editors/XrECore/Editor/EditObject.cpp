@@ -34,12 +34,8 @@ void CSurface::RemoveImageData()
 }
 #endif
 
-CEditableObject::CEditableObject(LPCSTR name):
-	m_physics_shell(0),
-    m_object_xform(0)
+CEditableObject::CEditableObject(LPCSTR name)
 {
-    m_FaceCount = -1;
-    m_VertexCount = -1;
 	m_LibName		= name;
 
 	m_objectFlags.zero	();
@@ -48,7 +44,7 @@ CEditableObject::CEditableObject(LPCSTR name):
 #if 1
     vs_SkeletonGeom	= 0;
 #endif
-	m_BBox.invalidate();
+	m_Box.invalidate();
 
     m_LoadState.zero();
 
@@ -60,6 +56,8 @@ CEditableObject::CEditableObject(LPCSTR name):
 
 	a_vPosition.set	(0.f,0.f,0.f);
     a_vRotate.set  	(0.f,0.f,0.f);
+	a_vScale 		= 1.f;
+	a_vAdjustMass 	= TRUE;
 
     bOnModified		= false;
 
@@ -131,13 +129,11 @@ void CEditableObject::ClearGeometry ()
     m_ActiveSMotion = 0;
 }
 
-int CEditableObject::GetFaceCount(bool bMatch2Sided, bool bIgnoreOCC)
-{
-    if (m_FaceCount!=-1)return m_FaceCount;
-    m_FaceCount =0;
+int CEditableObject::GetFaceCount(){
+	int cnt=0;
     for(EditMeshIt m = m_Meshes.begin();m!=m_Meshes.end();m++)
-        m_FaceCount +=(*m)->GetFaceCount(bMatch2Sided, bIgnoreOCC);
-	return m_FaceCount;
+        cnt+=(*m)->GetFaceCount();
+	return cnt;
 }
 
 int CEditableObject::GetSurfFaceCount(const char* surf_name){
@@ -148,30 +144,24 @@ int CEditableObject::GetSurfFaceCount(const char* surf_name){
 	return cnt;
 }
 
-int CEditableObject::GetVertexCount()
-{
-    if (m_VertexCount != -1)return m_VertexCount;
-    m_VertexCount =0;
+int CEditableObject::GetVertexCount(){
+	int cnt=0;
     for(EditMeshIt m = m_Meshes.begin();m!=m_Meshes.end();m++)
-        m_VertexCount +=(*m)->GetVertexCount();
-	return m_VertexCount;
+        cnt+=(*m)->GetVertexCount();
+	return cnt;
 }
 
-void CEditableObject::UpdateBox()
-{
+void CEditableObject::UpdateBox(){
 	VERIFY			(!m_Meshes.empty());
     EditMeshIt m	= m_Meshes.begin();
-    m_BBox.invalidate();
-
-    for(; m!=m_Meshes.end(); ++m)
-	{
+    m_Box.invalidate();
+    for(;m!=m_Meshes.end();m++){
         Fbox meshbox;
         (*m)->GetBox(meshbox);
-        for(int i=0; i<8; ++i)
-		{
+        for(int i=0; i<8; i++){
             Fvector pt;
             meshbox.getpoint(i, pt);
-            m_BBox.modify(pt);
+            m_Box.modify(pt);
         }
     }
 }
@@ -227,8 +217,15 @@ bool CEditableObject::VerifyBoneParts()
             }
         }
 
-    for (U8It u_it=b_use.begin(); u_it!=b_use.end(); u_it++)
-    	if (*u_it!=1) return false;
+    for (size_t u_it = 0; u_it < b_use.size(); u_it++){
+    	if (b_use[u_it] < 1){
+        	Msg("!Bone '%s' is not used in any part", *BoneNameByID(u_it));
+            return false;
+        }else if(b_use[u_it] > 1){
+        	Msg("!Bone '%s' is used in more than one part", *BoneNameByID(u_it));
+            return false;
+        }
+    }
     return true;
 }
 

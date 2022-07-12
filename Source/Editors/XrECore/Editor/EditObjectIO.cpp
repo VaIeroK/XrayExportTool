@@ -44,9 +44,7 @@ bool CEditableObject::Save(const char* fname)
 	{
         // update transform matrix
         Fmatrix	mTransform, mScale, mTranslate, mRotate;
-        if (	!fsimilar(t_vRotate.magnitude(),0)||
-				!fsimilar(t_vScale.magnitude(),1.73205f)||
-				!fsimilar(t_vPosition.magnitude(),0))
+        if (!fsimilar(t_vRotate.magnitude(),0)||!fsimilar(t_vScale.magnitude(),1.73205f)||!fsimilar(t_vPosition.magnitude(),0))
         {
             mRotate.setHPB			(t_vRotate.y, t_vRotate.x, t_vRotate.z);
             mScale.scale			(t_vScale);
@@ -63,16 +61,17 @@ bool CEditableObject::Save(const char* fname)
     // save object
     IWriter* F			= FS.w_open(fname);
 	if (F)
-	{
+    {
+	    {
         F->open_chunk	(EOBJ_CHUNK_OBJECT_BODY);
         Save			(*F);
         F->close_chunk	();
+		}
 
         FS.w_close		(F);
 
         m_LoadName 		= fname;
-        m_ObjectVersion = (int)FS.get_file_age(fname); 
-		VERIFY3			(m_ObjectVersion>0,"Invalid file age:",fname);
+        m_ObjectVersion = (int)FS.get_file_age(fname); 	VERIFY3(m_ObjectVersion>0,"Invalid file age:",fname);
         return			true;
     }else{
     	return 			false;
@@ -98,11 +97,8 @@ void CEditableObject::Save(IWriter& F)
     // meshes
     F.open_chunk	(EOBJ_CHUNK_EDITMESHES);
     int count		= 0;
-
-    for(EditMeshIt m = m_Meshes.begin(); m!=m_Meshes.end(); ++m)
-	{
-        F.open_chunk(count); 
-		++count;
+    for(EditMeshIt m = m_Meshes.begin();m!=m_Meshes.end();m++){
+        F.open_chunk(count); count++;
         (*m)->SaveMesh(F);
         F.close_chunk();
     }
@@ -111,9 +107,7 @@ void CEditableObject::Save(IWriter& F)
 	// surfaces
     F.open_chunk	(EOBJ_CHUNK_SURFACES3);
     F.w_u32			(m_Surfaces.size());
-
-    for (SurfaceIt sf_it=m_Surfaces.begin(); sf_it!=m_Surfaces.end(); ++sf_it)
-	{
+    for (SurfaceIt sf_it=m_Surfaces.begin(); sf_it!=m_Surfaces.end(); sf_it++){
         F.w_stringZ	((*sf_it)->_Name			());
         F.w_stringZ	((*sf_it)->_ShaderName		());
         F.w_stringZ	((*sf_it)->_ShaderXRLCName	());
@@ -129,8 +123,7 @@ void CEditableObject::Save(IWriter& F)
     // bones
     if (!m_Bones.empty()){
 	    F.open_chunk	(EOBJ_CHUNK_BONES2);
-	    for (BoneIt b_it=m_Bones.begin(); b_it!=m_Bones.end(); ++b_it)
-		{
+	    for (BoneIt b_it=m_Bones.begin(); b_it!=m_Bones.end(); b_it++){
         	F.open_chunk	(b_it-m_Bones.begin());
         	(*b_it)->Save	(F);
 	    	F.close_chunk	();
@@ -143,10 +136,7 @@ void CEditableObject::Save(IWriter& F)
     {
         F.open_chunk	(EOBJ_CHUNK_SMOTIONS);
         F.w_u32			(m_SMotions.size());
-        
-		for (SMotionIt s_it=m_SMotions.begin(); s_it!=m_SMotions.end(); ++s_it) 
-			(*s_it)->Save(F);
-
+        for (SMotionIt s_it=m_SMotions.begin(); s_it!=m_SMotions.end(); s_it++) (*s_it)->Save(F);
 		F.close_chunk	();
     }
     // skeleton motions refs
@@ -162,27 +152,25 @@ void CEditableObject::Save(IWriter& F)
     }
 
     // bone parts
-    if (!m_BoneParts.empty())
-	{
+    if (!m_BoneParts.empty()){
         F.open_chunk	(EOBJ_CHUNK_BONEPARTS2);
         F.w_u32			(m_BoneParts.size());
-        for (BPIt bp_it=m_BoneParts.begin(); bp_it!=m_BoneParts.end(); ++bp_it)
-		{
+        for (BPIt bp_it=m_BoneParts.begin(); bp_it!=m_BoneParts.end(); bp_it++){
             F.w_stringZ	(bp_it->alias);
             F.w_u32		(bp_it->bones.size());
-
-            for (RStringVecIt s_it=bp_it->bones.begin(); s_it!=bp_it->bones.end(); ++s_it)
+            for (RStringVecIt s_it=bp_it->bones.begin(); s_it!=bp_it->bones.end(); s_it++)
 	            F.w_stringZ(s_it->c_str());
 
         }
         F.close_chunk	();
     }
 
-    if (IsDynamic())
-	{
+	if (IsDynamic()){
 		F.open_chunk	(EOBJ_CHUNK_ACTORTRANSFORM);
         F.w_fvector3	(a_vPosition);
         F.w_fvector3	(a_vRotate);
+		F.w_float			(a_vScale);
+		F.w_u32 			(a_vAdjustMass);
 		F.close_chunk	();
     }
 
@@ -209,8 +197,7 @@ bool CEditableObject::Load(IReader& F)
         shared_str buf;
 		shared_str sh_name;
 		R_ASSERT(F.r_chunk(EOBJ_CHUNK_VERSION,&version));
-		if (version!=EOBJ_CURRENT_VERSION)
-		{
+		if (version!=EOBJ_CURRENT_VERSION){
 			ELog.DlgMsg( mtError, "CEditableObject: unsupported file version. Object can't load.");
 			bRes = false;
 			break;
@@ -218,19 +205,19 @@ bool CEditableObject::Load(IReader& F)
 
 		R_ASSERT(F.r_chunk(EOBJ_CHUNK_FLAGS, &m_objectFlags.flags));
 
-		if (F.find_chunk	(EOBJ_CHUNK_CLASSSCRIPT))
+		if (F.find_chunk	(EOBJ_CHUNK_CLASSSCRIPT)){
 			F.r_stringZ		(m_ClassScript);
+		}
 
-		if (F.find_chunk	(EOBJ_CHUNK_LODS))
+		if (F.find_chunk	(EOBJ_CHUNK_LODS)){
 			F.r_stringZ		(m_LODs);
+		}
 
 		// surfaces
-		if (F.find_chunk(EOBJ_CHUNK_SURFACES3))
-		{
+		if (F.find_chunk(EOBJ_CHUNK_SURFACES3)){
 			u32 cnt = F.r_u32();
 			m_Surfaces.resize(cnt);
-			for (SurfaceIt s_it=m_Surfaces.begin(); s_it!=m_Surfaces.end(); s_it++)
-			{
+			for (SurfaceIt s_it=m_Surfaces.begin(); s_it!=m_Surfaces.end(); s_it++){
 				*s_it 		= xr_new<CSurface>();
 				F.r_stringZ	(buf);	(*s_it)->SetName		(buf.c_str());
 				F.r_stringZ	(buf);	(*s_it)->SetShader		(buf.c_str());
@@ -289,11 +276,9 @@ bool CEditableObject::Load(IReader& F)
 
 		// Load meshes
 		IReader* OBJ = F.open_chunk(EOBJ_CHUNK_EDITMESHES);
-		if(OBJ)
-		{
+		if(OBJ){
 			IReader* M   = OBJ->open_chunk(0);
-			for (int count=1; M; count++) 
-			{
+			for (int count=1; M; count++) {
 				CEditableMesh* mesh=xr_new<CEditableMesh>(this);
 				if (mesh->LoadMesh(*M))
 					m_Meshes.push_back(mesh);
@@ -312,12 +297,10 @@ bool CEditableObject::Load(IReader& F)
 		// bones
         if (bRes){
             IReader* B_CHUNK = F.open_chunk(EOBJ_CHUNK_BONES2);
-            if (B_CHUNK)
-			{
+            if (B_CHUNK){
                 int chunk = 0;
                 IReader* O;
-                while (0!=(O=B_CHUNK->open_chunk(chunk++)))
-				{
+                while (0!=(O=B_CHUNK->open_chunk(chunk++))){
                     m_Bones.push_back(xr_new<CBone>());
                     m_Bones.back()->Load_1(*O);
                     O->close();
@@ -334,14 +317,11 @@ bool CEditableObject::Load(IReader& F)
             }
 
   			// skeleton motions
-            if (F.find_chunk(EOBJ_CHUNK_SMOTIONS))
-			{
+            if (F.find_chunk(EOBJ_CHUNK_SMOTIONS)){
                 m_SMotions.resize(F.r_u32());
-                for (SMotionIt s_it=m_SMotions.begin(); s_it!=m_SMotions.end(); s_it++)
-				{
+                for (SMotionIt s_it=m_SMotions.begin(); s_it!=m_SMotions.end(); s_it++){
                     *s_it = xr_new<CSMotion>();
-                    if (!(*s_it)->Load(F))
-					{
+                    if (!(*s_it)->Load(F)){
                         Log		("!Motions has different version. Load failed.");
                         xr_delete(*s_it);
                         m_SMotions.clear();
@@ -399,7 +379,7 @@ bool CEditableObject::Load(IReader& F)
                 }
 				if (!bBPok)	m_BoneParts.clear();
                 if (!m_BoneParts.empty()&&!VerifyBoneParts())
-                    Log		("!Invalid bone parts. Found duplicate bones in object '%s'.",GetName());
+                    Msg		("!Invalid bone parts. Found missing or duplicate bones in object '%s'.",GetName());
             }else if (F.find_chunk(EOBJ_CHUNK_BONEPARTS2)){
                 m_BoneParts.resize(F.r_u32());
                 for (BPIt bp_it=m_BoneParts.begin(); bp_it!=m_BoneParts.end(); bp_it++){
@@ -409,16 +389,23 @@ bool CEditableObject::Load(IReader& F)
                         F.r_stringZ(*s_it);
                 }
                 if (!m_BoneParts.empty()&&!VerifyBoneParts())
-                    Log			("!Invalid bone parts. Found duplicate bones in object '%s'.",GetName());
+                    Msg			("!Invalid bone parts. Found missing or duplicate bones in object '%s'.",GetName());
             }
         }
 
         if (bRes)
         {
-            if (F.find_chunk	(EOBJ_CHUNK_ACTORTRANSFORM))
+			IReader *r = F.open_chunk(EOBJ_CHUNK_ACTORTRANSFORM);
+			if (r)
             {
-                F.r_fvector3	(a_vPosition);
-                F.r_fvector3	(a_vRotate);
+				r->r_fvector3		(a_vPosition);
+				r->r_fvector3		(a_vRotate);
+				if(r->elapsed())
+            {
+					a_vScale 		= r->r_float();
+					a_vAdjustMass 	= !!r->r_u32();
+				}
+				r->close();
             }
 
             if (F.find_chunk	(EOBJ_CHUNK_DESC))
@@ -435,6 +422,7 @@ bool CEditableObject::Load(IReader& F)
 		if (!bRes) break;
 		UpdateBox		();
 		VerifyMeshNames	();
+        OnDeviceCreate	();
 	}while(0);
 
 	return bRes;
@@ -442,11 +430,8 @@ bool CEditableObject::Load(IReader& F)
 
 bool CEditableObject::ExportOGF(LPCSTR fn, u8 infl)
 {
-	UpdateBox		();
 	CMemoryWriter	F;
-
-    if (PrepareOGF(F,infl,true,NULL))
-	{
+    if (PrepareOGF(F,infl,true,NULL)){
     	return F.save_to(fn);
     }
     return false;
@@ -454,10 +439,8 @@ bool CEditableObject::ExportOGF(LPCSTR fn, u8 infl)
 //------------------------------------------------------------------------------
 bool CEditableObject::ExportOMF(LPCSTR fn)
 {
-	UpdateBox		();
 	CMemoryWriter	F;
-    if (PrepareOMF(F))
-	{
+    if (PrepareOMF(F)){
     	return F.save_to(fn);
     }
     return false;
@@ -465,11 +448,9 @@ bool CEditableObject::ExportOMF(LPCSTR fn)
 //------------------------------------------------------------------------------
 bool CEditableObject::ExportOBJ(LPCSTR fn)
 {
-	UpdateBox			();
     CExportObjectOGF E(this);
 	CMemoryWriter F;
-    if (E.ExportAsWavefrontOBJ(F,fn))
-	{
+    if (E.ExportAsWavefrontOBJ(F,fn)){
     	return F.save_to(fn);
     }
     return false;

@@ -867,7 +867,6 @@ void CActorTools::FillObjectProperties(PropItemVec& items, LPCSTR pref, ListItem
     if (m_pEditObjectType & CEditableObject::eoDynamic)
     {
         PHelper().CreateFlag32(items, "Object\\Flags\\Make Progressive", &m_pEditObject->m_objectFlags, CEditableObject::eoProgressive);
-        PHelper().CreateFlag32(items, "Object\\Flags\\HQ Geometry", &m_pEditObject->m_objectFlags, CEditableObject::eoHQExport);
     }
     else if (m_pEditObjectType & CEditableObject::eoMultipleUsage)
     {

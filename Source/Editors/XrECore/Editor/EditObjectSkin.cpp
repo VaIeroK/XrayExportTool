@@ -110,8 +110,15 @@ void CEditableObject::RenderSkeletonSingle(const Fmatrix& parent)
     RenderBones(parent);
 }
 
-void CEditableObject::RenderBones(const Fmatrix& parent)
+void CEditableObject::RenderBones(const Fmatrix& _parent)
 {
+	Fvector scale;
+	Fmatrix parent = _parent;
+
+	scale.x = parent.i.normalize_magn();
+	scale.y = parent.j.normalize_magn();
+	scale.z = parent.k.normalize_magn();
+
 	if (IsSkeleton()){
         // render
 		BoneVec& lst = m_Bones;
@@ -120,6 +127,7 @@ void CEditableObject::RenderBones(const Fmatrix& parent)
 	        RCache.set_xform_world(parent);
             Fmatrix& M 		= (*b_it)->_LTransform();
             Fvector p1		= M.c;
+			p1.mul			(scale);
             u32 c_joint		= (*b_it)->flags.is(CBone::flSelected)?color_bone_sel_color:color_bone_norm_color;
             if (EPrefs->object_flags.is(epoDrawJoints))
 	            DU_impl.DrawJoint	(p1,joint_size,c_joint);
@@ -127,6 +135,7 @@ void CEditableObject::RenderBones(const Fmatrix& parent)
             if ((*b_it)->shape.type!=SBoneShape::stNone){
                 Fvector cm;
                 M.transform_tiny(cm,(*b_it)->center_of_mass);
+				cm.mul			(scale);
                 if ((*b_it)->flags.is(CBone::flSelected)){
                     float sz 	= joint_size*2.f;
                     DU_impl.DrawCross	(cm, sz,sz,sz, sz,sz,sz, 0xFFFFFFFF, false);
@@ -149,6 +158,7 @@ void CEditableObject::RenderBones(const Fmatrix& parent)
 			}
 			if (EPrefs->object_flags.is(epoDrawBoneAxis)){
             	Fmatrix mat; mat.mul(parent,M);
+				mat.c.mul(scale);
 	          	DU_impl.DrawObjectAxis(mat,0.03f,(*b_it)->flags.is(CBone::flSelected));
             }
 			if (EPrefs->object_flags.is(epoDrawBoneNames)){
@@ -160,7 +170,14 @@ void CEditableObject::RenderBones(const Fmatrix& parent)
 			if (EPrefs->object_flags.is(epoDrawBoneShapes)){
 		        EDevice->SetShader(EDevice->m_SelectionShader);
                 Fmatrix mat	= M;
-                mat.mulA_43	(parent);
+
+				// model scale doesn't affect shapes
+				//mat.mulA_43	(parent);
+				//mat.c.mul	(scale);
+
+				// shapes scaled along with model
+				mat.mulA_43	(_parent);
+
                 u32 c 		= (*b_it)->flags.is(CBone::flSelected)?0x80ffffff:0x300000ff;
                 if ((*b_it)->shape.Valid()){
                     switch ((*b_it)->shape.type){
@@ -232,7 +249,7 @@ void ComputeSphere(Fsphere &B, FvectorVec& V)
 
 	// 1: calc first variation
 	Fsphere	S1;
-    Fsphere_compute		(S1,V.data(),V.size());
+	Fsphere_compute		(S1,&V.front(),V.size());
 	BOOL B1				= SphereValid(V,S1);
     
 	// 2: calc ordinary algorithm (2nd)
@@ -251,7 +268,7 @@ void ComputeSphere(Fsphere &B, FvectorVec& V)
 	BOOL B2				= SphereValid(V,S2);
 
 	// 3: calc magic-fm
-	Mgc::Sphere _S3 = Mgc::MinSphere(V.size(), (const Mgc::Vector3*) V.data());
+	Mgc::Sphere _S3 = Mgc::MinSphere(V.size(), (const Mgc::Vector3*) &V.front());
 	Fsphere	S3;
 	S3.P.set			(_S3.Center().x,_S3.Center().y,_S3.Center().z);
 	S3.R				= _S3.Radius();

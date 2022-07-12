@@ -81,7 +81,7 @@ public:
     }
 #if 1
 					~CSurface		(){R_ASSERT(!m_Shader);xr_delete(m_ImageData);}
-	IC void			CopyFrom		(CSurface* surf){*this = *surf; m_Shader=0; m_RTFlags.set(rtValidShader, FALSE);}
+	IC void			CopyFrom		(CSurface* surf){*this = *surf; m_Shader=0;}
     IC int			_Priority		()	{return _Shader()?_Shader()->E[0]->flags.iPriority:1;}
     IC bool			_StrictB2F		()	{return _Shader()?_Shader()->E[0]->flags.bStrictB2F:false;}
 	IC ref_shader	_Shader			()	{if (!m_RTFlags.is(rtValidShader)) OnDeviceCreate(); return m_Shader;}
@@ -105,7 +105,7 @@ public:
     IC void 		SetShaderXRLC	(LPCSTR name){m_ShaderXRLCName=name;}
     IC void			SetGameMtl		(LPCSTR name){m_GameMtlName=name;}
     IC void			SetFVF			(u32 fvf){m_dwFVF=fvf;}
-    IC void			SetTexture		(LPCSTR name){string512 buf; xr_strcpy(buf, sizeof(buf), name); if(strext(buf)) *strext(buf)=0; m_Texture=buf;}
+    IC void			SetTexture		(LPCSTR name){string512 buf; strcpy(buf,name); if(strext(buf)) *strext(buf)=0; m_Texture=buf;}
     IC void			SetVMap			(LPCSTR name){m_VMap=name;}
 #if 1
     IC u32			_GameMtl		()const	{return GameMaterialLibrary->GetMaterialID	(*m_GameMtlName);}
@@ -169,6 +169,7 @@ public CPhysicsShellHolderEditorBase
 // general
 	xr_string		m_ClassScript;
 
+	SurfaceVec		m_Surfaces;
 	EditMeshVec		m_Meshes;
 
     ref_shader		m_LODShader;
@@ -178,11 +179,7 @@ public CPhysicsShellHolderEditorBase
 	SMotionVec		m_SMotions;
     BPVec			m_BoneParts;
     CSMotion*		m_ActiveSMotion;
-    CPhysicsShell*	m_physics_shell;
-    Fmatrix*		m_object_xform;
 public:
-
-    SurfaceVec		m_Surfaces;
     SAnimParams				m_SMParam;
     xr_vector<shared_str>	m_SMotionRefs;
     shared_str				m_LODs;
@@ -196,7 +193,6 @@ public:
         eoHOM			= (1<<3),			
         eoMultipleUsage	= (1<<4),			
         eoSoundOccluder	= (1<<5),
-        eoHQExport      = (1<<6),           
 		eoFORCE32		= u32(-1)           
     };
     IC BOOL			IsDynamic				(){return m_objectFlags.is(eoDynamic);}
@@ -204,11 +200,13 @@ public:
     IC BOOL			IsMUStatic				(){return !m_objectFlags.is(eoSoundOccluder)&&!m_objectFlags.is(eoDynamic)&&!m_objectFlags.is(eoHOM)&&m_objectFlags.is(eoMultipleUsage);}
 private:
 	// bounding volume
-	Fbox 			m_BBox;
+	Fbox 			m_Box;
 public:
     // temp variable for actor
 	Fvector 		a_vPosition;
     Fvector			a_vRotate;
+	float 			a_vScale;
+	BOOL 			a_vAdjustMass;
 
     // temp variables for transformation
 	Fvector 		t_vPosition;
@@ -276,7 +274,7 @@ public:
     IC BoneIt		FirstBone				()	{return m_Bones.begin();}
     IC BoneIt		LastBone				()	{return m_Bones.end();}
 	IC BoneVec&		Bones					()	{return m_Bones;}
-    IC int			BoneCount				()const	{return m_Bones.size();}
+    IC int			BoneCount				() const	{return m_Bones.size();}
     shared_str		BoneNameByID			(int id);
     int				GetRootBoneID			();
     int				PartIDByName			(LPCSTR name);
@@ -296,7 +294,7 @@ public:
 
 	IC xr_string&	GetClassScript			()	{return m_ClassScript;}
 
-    IC const Fbox&	_BCL GetBox				() const 	{return m_BBox;}
+    IC const Fbox&	_BCL GetBox				() const 	{return m_Box;}
 
     IC LPCSTR		GetLODs					()	{return m_LODs.c_str();}
 
@@ -320,7 +318,7 @@ public:
 
     // statistics methods
 	void 			GetFaceWorld			(const Fmatrix& parent, CEditableMesh* M, int idx, Fvector* verts);
-    int 			GetFaceCount			(bool bMatch2Sided=true, bool bIgnoreOCC=true);
+    int 			GetFaceCount			();
 	int 			GetVertexCount			();
     int 			GetSurfFaceCount		(LPCSTR surf_name);
 
