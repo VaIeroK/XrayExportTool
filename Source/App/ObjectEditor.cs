@@ -1570,6 +1570,30 @@ namespace Object_tool
 			box.Controls.Add(MassTextBox);
 		}
 
+		private void TextureDragEnterEvent(object sender, DragEventArgs e)
+		{
+			if(e.Data.GetDataPresent(DataFormats.FileDrop))
+				e.Effect = DragDropEffects.Copy;
+			else
+				e.Effect = DragDropEffects.None;
+		}
+
+		private void TexureDragDropEvent(object sender, DragEventArgs e)
+        {
+			string[] fileList = (string[])e.Data.GetData(DataFormats.FileDrop, false);
+			TextBox box = sender as TextBox;
+			box.Text = ParseXrayPath(fileList[0]);
+		}
+
+		private string ParseXrayPath(string filepath)
+        {
+			string res = filepath.Replace(".dds","");
+
+			res = res.Substring(res.IndexOf("textures") + 9);
+
+			return res;
+        }
+
 		private void CreateSurfaceGroupBox(int idx, Object.Surface surface)
 		{
 			var GroupBox = new GroupBox();
@@ -1607,6 +1631,9 @@ namespace Object_tool
 			TextureTextBox.Location = new System.Drawing.Point(55, 30);
 			TextureTextBox.TextChanged += new System.EventHandler(this.TextBoxFilter);
 			TextureTextBox.Anchor = AnchorStyles.Left | AnchorStyles.Right;
+			TextureTextBox.DragEnter += new DragEventHandler(TextureDragEnterEvent);
+			TextureTextBox.DragDrop += new DragEventHandler(TexureDragDropEvent);
+			TextureTextBox.AllowDrop = true;
 
 			string texture_path = surface.texture;
 			if (surface.texture.LastIndexOf('.') != -1)
